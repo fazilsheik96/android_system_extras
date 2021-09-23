@@ -683,6 +683,8 @@ bool RecordCommand::DoRecording(Workload* workload) {
     return false;
   }
   time_stat_.finish_recording_time = GetSystemClock();
+  uint64_t recording_time = time_stat_.finish_recording_time - time_stat_.start_recording_time;
+  LOG(INFO) << "Recorded for " << recording_time / 1e9 << " seconds. Start post processing.";
   return true;
 }
 
@@ -778,13 +780,13 @@ bool RecordCommand::PostProcessRecording(const std::vector<std::string>& args) {
     }
   }
   LOG(DEBUG) << "Prepare recording time "
-             << (time_stat_.start_recording_time - time_stat_.prepare_recording_time) / 1e6
-             << " ms, recording time "
-             << (time_stat_.stop_recording_time - time_stat_.start_recording_time) / 1e6
-             << " ms, stop recording time "
-             << (time_stat_.finish_recording_time - time_stat_.stop_recording_time) / 1e6
-             << " ms, post process time "
-             << (time_stat_.post_process_time - time_stat_.finish_recording_time) / 1e6 << " ms.";
+             << (time_stat_.start_recording_time - time_stat_.prepare_recording_time) / 1e9
+             << " s, recording time "
+             << (time_stat_.stop_recording_time - time_stat_.start_recording_time) / 1e9
+             << " s, stop recording time "
+             << (time_stat_.finish_recording_time - time_stat_.stop_recording_time) / 1e9
+             << " s, post process time "
+             << (time_stat_.post_process_time - time_stat_.finish_recording_time) / 1e9 << " s.";
   return true;
 }
 
@@ -1916,6 +1918,11 @@ bool RecordCommand::DumpMetaInfoFeature(bool kernel_symbols_available) {
   info_map["android_version"] = android::base::GetProperty("ro.build.version.release", "");
   info_map["android_sdk_version"] = android::base::GetProperty("ro.build.version.sdk", "");
   info_map["android_build_type"] = android::base::GetProperty("ro.build.type", "");
+  info_map["android_build_fingerprint"] = android::base::GetProperty("ro.build.fingerprint", "");
+  utsname un;
+  if (uname(&un) == 0) {
+    info_map["kernel_version"] = un.release;
+  }
   if (!app_package_name_.empty()) {
     info_map["app_package_name"] = app_package_name_;
     if (IsRoot()) {
