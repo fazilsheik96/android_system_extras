@@ -545,6 +545,9 @@ TEST(record_cmd, trace_offcpu_option) {
   ASSERT_TRUE(reader);
   auto info_map = reader->GetMetaInfoFeature();
   ASSERT_EQ(info_map["trace_offcpu"], "true");
+  if (IsSwitchRecordSupported()) {
+    ASSERT_EQ(reader->AttrSection()[0].attr->context_switch, 1);
+  }
   // Release recording environment in perf.data, to avoid affecting tests below.
   reader.reset();
 
@@ -747,6 +750,10 @@ static void TestRecordingApps(const std::string& app_name, const std::string& ap
   it = meta_info.find("app_type");
   ASSERT_NE(it, meta_info.end());
   ASSERT_EQ(it->second, app_type);
+  reader.reset(nullptr);
+
+  // Check that simpleperf can't execute child command in app uid.
+  ASSERT_FALSE(helper.RecordData("--app " + app_name + " -e " + GetDefaultEvent() + " sleep 1"));
 }
 
 TEST(record_cmd, app_option_for_debuggable_app) {
@@ -880,7 +887,9 @@ TEST(record_cmd, check_trampoline_after_art_jni_methods) {
         std::string sym_name = get_symbol_name(thread, ips[i]);
         if (android::base::StartsWith(sym_name, "art::Method_invoke") && i + 1 < ips.size()) {
           has_check = true;
-          if (get_symbol_name(thread, ips[i + 1]) != "art_jni_trampoline") {
+          std::string name = get_symbol_name(thread, ips[i + 1]);
+          if (!android::base::EndsWith(name, "jni_trampoline")) {
+            GTEST_LOG_(ERROR) << "unexpected symbol after art::Method_invoke: " << name;
             return false;
           }
         }
