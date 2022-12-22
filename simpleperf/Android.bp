@@ -65,6 +65,11 @@ cc_defaults {
             local_include_dirs: ["nonlinux_support/include"],
         },
     },
+    arch: {
+        riscv64: {
+            enabled: false,
+        },
+    },
 }
 
 // linked as a separate library because using OpenCSD headers needs to enable exception
@@ -121,11 +126,6 @@ cc_defaults {
                 "libprocinfo",
                 "libevent",
                 "libc++fs",
-            ],
-        },
-        android: {
-            static_libs: [
-                "libc",
             ],
         },
         linux_glibc_x86_64: {
@@ -389,6 +389,9 @@ cc_binary {
     target: {
         android: {
             static_executable: true,
+            static_libs: [
+                "libc",
+            ],
         },
         android_arm: {
             dist: {
@@ -709,19 +712,6 @@ cc_test {
     },
 }
 
-python_library_host {
-    name: "simpleperf_report_lib",
-    srcs: [
-        "scripts/simpleperf_report_lib.py",
-        "scripts/simpleperf_utils.py",
-    ],
-    data: [
-        "scripts/bin/darwin/x86_64/libsimpleperf_report.dylib",
-        "scripts/bin/linux/x86_64/libsimpleperf_report.so",
-        "scripts/bin/windows/**/*.dll",
-    ],
-}
-
 filegroup {
     name: "system-extras-simpleperf-testdata",
     srcs: ["CtsSimpleperfTestCases_testdata/**/*"],
@@ -730,7 +720,7 @@ filegroup {
 cc_fuzz {
     name: "libsimpleperf_report_fuzzer",
     defaults: [
-        "simpleperf_shared_libs",
+        "simpleperf_static_libs",
     ],
     host_supported: true,
     srcs: [
@@ -738,14 +728,12 @@ cc_fuzz {
     ],
     static_libs: [
         "libsimpleperf",
-        "libLLVMObject",
-        "libLLVMBitReader",
-        "libLLVMMC",
-        "libLLVMMCParser",
-        "libLLVMCore",
-        "libLLVMSupport",
     ],
     target: {
+        linux: {
+            // Fuzzer may not be able to load libdexfile. So statically link it.
+            static_libs: ["libdexfile_static"],
+        },
         windows: {
             enabled: false,
         },
