@@ -275,7 +275,9 @@ class PerfDataReader {
         thread_tree_.ExcludePid(pid);
       }
     }
-    record_file_reader_->LoadBuildIdAndFileFeatures(thread_tree_);
+    if (!record_file_reader_->LoadBuildIdAndFileFeatures(thread_tree_)) {
+      return false;
+    }
     if (!record_file_reader_->ReadDataSection([this](auto r) { return ProcessRecord(r.get()); })) {
       return false;
     }
@@ -316,6 +318,10 @@ class PerfDataReader {
         if (!record_file_reader_->ReadAuxData(aux->Cpu(), aux->data->aux_offset,
                                               aux_data_buffer_.data(), aux_size)) {
           LOG(ERROR) << "failed to read aux data in " << filename_;
+          return false;
+        }
+        if (!etm_decoder_) {
+          LOG(ERROR) << "ETMDecoder isn't created";
           return false;
         }
         return etm_decoder_->ProcessData(aux_data_buffer_.data(), aux_size, !aux->Unformatted(),

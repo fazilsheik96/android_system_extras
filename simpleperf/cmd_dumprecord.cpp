@@ -322,7 +322,9 @@ void DumpRecordCommand::DumpAttrSection() {
 
 bool DumpRecordCommand::DumpDataSection() {
   thread_tree_.ShowIpForUnknownSymbol();
-  record_file_reader_->LoadBuildIdAndFileFeatures(thread_tree_);
+  if (!record_file_reader_->LoadBuildIdAndFileFeatures(thread_tree_)) {
+    return false;
+  }
 
   auto record_callback = [&](std::unique_ptr<Record> r) { return ProcessRecord(r.get()); };
   return record_file_reader_->ReadDataSection(record_callback);
@@ -417,6 +419,10 @@ bool DumpRecordCommand::DumpAuxData(const AuxRecord& aux) {
   if (size > 0) {
     std::unique_ptr<uint8_t[]> data(new uint8_t[size]);
     if (!record_file_reader_->ReadAuxData(aux.Cpu(), aux.data->aux_offset, data.get(), size)) {
+      return false;
+    }
+    if (!etm_decoder_) {
+      LOG(ERROR) << "ETMDecoder isn't created";
       return false;
     }
     return etm_decoder_->ProcessData(data.get(), size, !aux.Unformatted(), aux.Cpu());
