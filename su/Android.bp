@@ -12,18 +12,3 @@ license {
         "NOTICE",
     ],
 }
-
-cc_binary {
-    name: "su",
-
-    cflags: [
-        "-Wall",
-        "-Werror",
-    ],
-
-    srcs: ["su.cpp"],
-
-    install_in_xbin: true,
-
-    header_libs: ["libcutils_headers"],
-}
